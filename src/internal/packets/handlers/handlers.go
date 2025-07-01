@@ -11,19 +11,14 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type Handler struct {
-}
-
-func (h *Handler) Handle(ws *websocket.Conn, data []byte) {}
-
-var upgrader = websocket.Upgrader{
+var Upgrader = websocket.Upgrader{
 	ReadBufferSize:   255,
 	WriteBufferSize:  255,
 	HandshakeTimeout: 10 * time.Second,
 }
 
 func ReadPacket(w http.ResponseWriter, r *http.Request) {
-	c, err := upgrader.Upgrade(w, r, nil)
+	c, err := Upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		panic(err)
 	}

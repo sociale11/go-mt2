@@ -3,13 +3,13 @@ package db
 import (
 	"fmt"
 	"go-mt2/pkg/db/models"
-	"log"
 	"os"
 	"time"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
 
 type DBService struct {
@@ -17,11 +17,11 @@ type DBService struct {
 	GameDB *gorm.DB
 }
 
-func NewAuthDB() *gorm.DB {
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
-	}
+func Init() {
 
+}
+
+func NewAuthDB() *gorm.DB {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_ROOT_PASSWORD"),
@@ -30,7 +30,11 @@ func NewAuthDB() *gorm.DB {
 		os.Getenv("AUTH_DB_DATABASE_NAME"),
 	)
 
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+		NamingStrategy: schema.NamingStrategy{
+			SingularTable: true,
+		},
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -47,27 +51,15 @@ func NewGameDB() *gorm.DB {
 		os.Getenv("AUTH_DB_DATABASE_NAME"),
 	)
 
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+		NamingStrategy: schema.NamingStrategy{
+			SingularTable: true,
+		},
+	})
 	if err != nil {
 		panic(err)
 	}
 	return db
-}
-
-func (db *DBService) MigrateAuth() {
-	db.AuthDB.AutoMigrate(&models.Account{})
-	db.AuthDB.AutoMigrate(&models.AccountStatus{})
-
-	db.AuthDB.Create(&models.Account{
-		Username:        "admin",
-		Password:        "admin",
-		Email:           "admin@example.com",
-		AccountStatusId: 1,
-	})
-}
-
-func (db *DBService) MigrateGame() {
-	db.AuthDB.Raw()
 }
 
 func (db *DBService) SeedAuth() {
@@ -83,9 +75,10 @@ func (db *DBService) SeedAuth() {
 	db.AuthDB.Create(&models.Account{
 		Id:              1,
 		Username:        "admin",
-		Password:        "admin",
+		Password:        "$2b$05$KXeREc2TNuUR6IcgzUiX4.WA/0i3Yd3WpUHMtAcQi1ojWRdeQ9ExS",
 		Email:           "admin@example.com",
 		DeleteCode:      "1234567",
+		LastLogin:       time.Now(),
 		AccountStatusId: 1,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
