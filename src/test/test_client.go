@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/binary"
 	"go-mt2/internal/packets/in"
 	"log"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -16,18 +18,30 @@ func main() {
 	defer conn.Close()
 
 	// Create a login packet
-	loginData := createLoginPacket("admin", "admin")
+	_ = createLoginPacket("admin", "admin")
 
-	for i := 0; i < 10; i++ {
-		log.Printf("Sending: %x", loginData)
-
-		// Send the packet
-		err = conn.WriteMessage(websocket.BinaryMessage, loginData)
+	for {
+		_, data, err := conn.ReadMessage()
 		if err != nil {
-			log.Println("write:", err)
-			return
+			log.Printf("Read error: %v", err)
+			break
+		}
+
+		if data[0] == byte(in.HEADER_CG_HANDSHAKE) {
+			conn.WriteMessage(websocket.BinaryMessage, createHandshakePacket(data))
 		}
 	}
+
+	// for range 100 {
+	// log.Printf("Sending: %x", loginData)
+
+	// Send the packet
+	// 	err = conn.WriteMessage(websocket.BinaryMessage, handshake)
+	// 	if err != nil {
+	// 		log.Println("write:", err)
+	// 		return
+	// 	}
+	// }
 
 	// Read response
 	_, message, err := conn.ReadMessage()
@@ -40,16 +54,24 @@ func main() {
 }
 
 func createLoginPacket(username, password string) []byte {
-	data := make([]byte, 1+31+17) // header + username + password
-
-	// Header
+	data := make([]byte, 1+30+16) // header + username + password
 	data[0] = byte(in.HEADER_CG_LOGIN)
+	copy(data[1:31], username)
+	copy(data[32:47], password)
+	return data
+}
 
-	// Username (31 bytes, null-padded)
-	copy(data[1:32], username)
+func createHandshakePacket(data []byte) []byte {
+	newPacket := make([]byte, 1+4+4+4)
 
-	// Password (17 bytes, null-padded)
-	copy(data[32:49], password)
+	data[0] = byte(in.HEADER_CG_HANDSHAKE)
+	dwHandshake := binary.LittleEndian.Uint32(data[1:5])
+	dwTime := uint32(time.Now().Unix())
+	lDelta := int32(binary.LittleEndian.Uint32(data[9:13])) - int32(dwTime)
+
+	binary.LittleEndian.PutUint32(newPacket[1:5], uint32(dwHandshake))
+	binary.LittleEndian.PutUint32(newPacket[5:9], uint32(dwTime))
+	binary.LittleEndian.PutUint32(newPacket[9:13], uint32(lDelta))
 
 	return data
 }

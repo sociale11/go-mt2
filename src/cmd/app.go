@@ -1,13 +1,16 @@
 package cmd
 
 import (
+	"encoding/binary"
 	"go-mt2/config"
 	"go-mt2/internal/packets/handlers"
 	"go-mt2/internal/packets/in"
 	"go-mt2/pkg/auth"
 	"go-mt2/pkg/db"
 	"log"
+	"math/rand/v2"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -54,6 +57,9 @@ func (app *App) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	defer c.Close()
 
 	log.Println("Client connected")
+	log.Println("Creating handshake packet")
+
+	c.WriteMessage(websocket.BinaryMessage, app.CreateHandshakePacket())
 
 	for {
 		_, data, err := c.ReadMessage()
@@ -77,28 +83,30 @@ func (app *App) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Add packet handling method to App
 func (app *App) HandlePacket(packet in.ClientPacket, conn *websocket.Conn) error {
+	log.Println(conn.RemoteAddr())
 	switch p := packet.(type) {
 	case *in.LoginPacket:
-		return app.handleLogin(p, conn)
-	// Add other packet types here
+		return in.HandleLogin(p, conn)
+	case *in.HandshakePacket:
+		return in.HandleHandshake(p, conn)
 	default:
 		log.Printf("Unhandled packet type: %T", packet)
 		return nil
 	}
 }
 
-// Example login handler
-func (app *App) handleLogin(packet *in.LoginPacket, conn *websocket.Conn) error {
-	log.Printf("Login attempt: username=%s", packet.Username)
+func (app *App) CreateHandshakePacket() []byte {
+	data := make([]byte, 1+4+4+4)
 
-	// Use your auth service here
-	// result := app.Auth.ValidateLogin(packet.Username, packet.Password)
+	data[0] = byte(in.HEADER_CG_HANDSHAKE)
+	dwHandshake := rand.Uint32()
+	dwTime := uint32(time.Now().Unix())
+	lDelta := 0
 
-	// Send response back to client
-	// response := CreateLoginResponse(result)
-	// return conn.WriteMessage(websocket.BinaryMessage, response)
+	binary.LittleEndian.PutUint32(data[1:5], uint32(dwHandshake))
+	binary.LittleEndian.PutUint32(data[5:9], uint32(dwTime))
+	binary.LittleEndian.PutUint32(data[9:13], uint32(lDelta))
 
-	return nil
+	return data
 }

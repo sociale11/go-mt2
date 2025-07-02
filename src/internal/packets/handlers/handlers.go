@@ -55,7 +55,10 @@ func CreatePacketFromData(data []byte) (in.ClientPacket, error) {
 			}
 			return packet, nil
 		}
+	case in.HEADER_CG_HANDSHAKE:
+		{
 
+		}
 	default:
 		return nil, fmt.Errorf("unknown packet type: %d", packetType)
 	}

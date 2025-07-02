@@ -67,6 +67,14 @@ func (r *BufferReader) ReadUInt32() (uint32, error) {
 	return binary.LittleEndian.Uint32(res), nil
 }
 
+func (r *BufferReader) ReadInt32() (int32, error) {
+	res, err := r.ReadField(4)
+	if err != nil {
+		return 0, err
+	}
+	return int32(binary.LittleEndian.Uint32(res)), nil
+}
+
 func (r *BufferReader) ReadUInt64() (uint64, error) {
 	res, err := r.ReadField(8)
 	if err != nil {
